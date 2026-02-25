@@ -1,0 +1,223 @@
+================================================================================
+  GUIDE DE DÉPLOIEMENT - GESTION SCOLAIRE SOUS APACHE2
+================================================================================
+
+Projet : gestion-scolaire (Next.js + NestJS)
+Serveur : Ubuntu/Debian avec Apache2
+
+================================================================================
+ÉTAPE 1 : PRÉREQUIS SUR LE SERVEUR
+================================================================================
+
+- Ubuntu 20.04+ ou Debian 11+
+- Apache2
+- Node.js 20+
+- pnpm
+- PostgreSQL
+- Git
+
+================================================================================
+ÉTAPE 2 : INSTALLATION DES PRÉREQUIS
+================================================================================
+
+# Node.js 20
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# pnpm
+sudo npm install -g pnpm
+
+# PostgreSQL
+sudo apt install -y postgresql postgresql-contrib
+
+# Apache2 (si pas déjà installé)
+sudo apt install -y apache2
+
+================================================================================
+ÉTAPE 3 : ACTIVER LES MODULES APACHE
+================================================================================
+
+sudo a2enmod proxy proxy_http headers
+sudo systemctl restart apache2
+
+================================================================================
+ÉTAPE 4 : DÉPLOYER L'APPLICATION
+================================================================================
+
+# Créer le dossier
+cd /var/www
+sudo mkdir -p gestion-scolaire
+sudo chown $USER:$USER gestion-scolaire
+cd gestion-scolaire
+
+# Option A : Cloner depuis GitHub
+git clone https://github.com/lyissa1928-ai/projet-IA.git .
+cd gestion-scolaire
+
+# Option B : Copier les fichiers manuellement (scp, rsync, etc.)
+
+================================================================================
+ÉTAPE 5 : CONFIGURER LA BASE DE DONNÉES
+================================================================================
+
+# Créer la base et l'utilisateur PostgreSQL
+sudo -u postgres psql
+
+Dans psql :
+  CREATE USER scolarite WITH PASSWORD 'votre_mot_de_passe';
+  CREATE DATABASE gestion_scolaire OWNER scolarite;
+  \q
+
+================================================================================
+ÉTAPE 6 : CONFIGURER LES VARIABLES D'ENVIRONNEMENT
+================================================================================
+
+# Fichier apps/api/.env
+nano apps/api/.env
+
+Contenu :
+  DATABASE_URL="postgresql://scolarite:votre_mot_de_passe@localhost:5432/gestion_scolaire"
+  PORT=3001
+
+# Sauvegarder (Ctrl+O, Entrée, Ctrl+X)
+
+================================================================================
+ÉTAPE 7 : INSTALLER, MIGRER ET BUILDER
+================================================================================
+
+cd /var/www/gestion-scolaire
+
+# Installer les dépendances
+pnpm install
+
+# Exécuter les migrations
+pnpm db:migrate
+
+# Seed (compte admin initial)
+pnpm db:seed
+
+# Build de l'application
+pnpm build
+
+================================================================================
+ÉTAPE 8 : INSTALLER ET CONFIGURER PM2
+================================================================================
+
+# Installer PM2 (gestionnaire de processus)
+sudo npm install -g pm2
+
+# Démarrer l'API
+cd /var/www/gestion-scolaire/apps/api
+pm2 start dist/src/main.js --name "gestion-api"
+
+# Démarrer le frontend
+cd /var/www/gestion-scolaire/apps/web
+pm2 start npm --name "gestion-web" -- start
+
+# Sauvegarder la configuration (redémarrage auto au boot)
+pm2 save
+pm2 startup
+# Exécuter la commande affichée par pm2 startup
+
+================================================================================
+ÉTAPE 9 : CONFIGURER APACHE2
+================================================================================
+
+# Copier le fichier de configuration
+sudo cp /var/www/gestion-scolaire/deploy/apache2/gestion-scolaire.conf /etc/apache2/sites-available/
+
+# Modifier le ServerName (votre domaine ou IP)
+sudo nano /etc/apache2/sites-available/gestion-scolaire.conf
+
+Remplacer :
+  ServerName gestion-scolaire.local
+Par :
+  ServerName www.votredomaine.com
+  (ou votre adresse IP si pas de domaine)
+
+# Activer le site
+sudo a2ensite gestion-scolaire
+
+# Tester la configuration Apache
+sudo apache2ctl configtest
+
+# Recharger Apache
+sudo systemctl reload apache2
+
+================================================================================
+ÉTAPE 10 : CONFIGURER HTTPS (OPTIONNEL - RECOMMANDÉ)
+================================================================================
+
+# Installer Certbot
+sudo apt install certbot python3-certbot-apache
+
+# Obtenir un certificat SSL (remplacer par votre domaine)
+sudo certbot --apache -d votredomaine.com
+
+# Le certificat se renouvelle automatiquement
+
+================================================================================
+VÉRIFICATIONS
+================================================================================
+
+# Tester l'API en local
+curl http://localhost:3001/api/v1/health
+
+# Tester le frontend en local
+curl http://localhost:3000
+
+# Vérifier les processus PM2
+pm2 status
+
+# Voir les logs en cas de problème
+pm2 logs
+
+================================================================================
+MISE À JOUR DE L'APPLICATION
+================================================================================
+
+cd /var/www/gestion-scolaire
+
+# Récupérer les dernières modifications
+git pull
+
+# Réinstaller les dépendances (si package.json modifié)
+pnpm install
+
+# Rebuild
+pnpm build
+
+# Migrations (si schéma modifié)
+pnpm db:migrate
+
+# Redémarrer les applications
+pm2 restart gestion-api gestion-web
+
+================================================================================
+COMMANDES UTILES
+================================================================================
+
+pm2 status          # État des processus
+pm2 logs            # Voir les logs
+pm2 restart all     # Redémarrer tout
+pm2 stop all        # Arrêter tout
+
+sudo systemctl status apache2    # État d'Apache
+sudo tail -f /var/log/apache2/gestion-scolaire-error.log   # Logs Apache
+
+================================================================================
+SCHÉMA DU FLUX
+================================================================================
+
+Internet (port 80/443)
+    |
+    v
+Apache2
+    |
+    +-- /api/v1/*  -->  Node.js API (port 3001)
+    |
+    +-- /*         -->  Next.js (port 3000)
+
+================================================================================
+FIN DU GUIDE
+================================================================================
