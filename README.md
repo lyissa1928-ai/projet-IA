@@ -9,25 +9,22 @@ Projets de gestion et d'intelligence artificielle.
 - **lab-virtuel** — Laboratoire virtuel
 - **stockage-agricole** — Gestion de stockage agricole
 
-## Synchronisation GitHub
+## Synchronisation automatique vers GitHub
 
-Pour envoyer vos changements sur GitHub :
+### Option 1 : Auto-sync (sans intervention)
 
-### Option 1 : Script automatique (recommandé)
+1. Double-cliquez sur **demarrer-auto-sync.bat**
+2. Gardez la fenêtre ouverte
+3. Tous vos changements sont automatiquement envoyés sur GitHub 10 secondes après la dernière modification
 
-Double-cliquez sur **sync-github.bat** ou exécutez dans PowerShell :
-```powershell
-.\sync-github.ps1
+Pour lancer au démarrage de Windows : placez un raccourci de `demarrer-auto-sync.bat` dans :
+```
+C:\Users\lyiss\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup
 ```
 
-### Option 2 : Commandes manuelles
+### Option 2 : Synchronisation manuelle
 
-```bash
-cd "C:\Users\lyiss\Desktop\projet IA"
-git add .
-git commit -m "Votre message"
-git push origin main
-```
+Double-cliquez sur **sync-github.bat** pour pousser une fois.
 
 ## Lien GitHub
 
